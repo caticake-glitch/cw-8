@@ -1,43 +1,67 @@
-from flask import Flask, request, render_template, jsonify
-import anthropic
 import os
+import anthropic
 from dotenv import load_dotenv
+from anthropic import Anthropic
 
 load_dotenv()
-api_key = os.getenv("ANTHROPIC_API_KEY")
+
+api_key = os.environ.get("ANTHROPIC_API_KEY")
 
 if api_key is None:
-    raise ValueError("BŁĄD: Brak klucza API ANTHROPIC_API_KEY w zmiennych srodowiskowych")
+    print("BŁĄD")
 
-app = Flask(__name__)
 client = anthropic.Anthropic(api_key=api_key)
-historia = []
 
-@app.route('/')
-def index():
-    return render_template('index.html')
+#to co widzisz przy wejsciu
+history = []
 
-@app.route('/chat', methods=['POST'])
-def chat():
-    dane = request.get_json()
-    wiadomosc = dane.get('message', '')
+print("\n" + "="*50)
+print("CHATBOT CLAUDE - wersja terminalna")
+print("-"*50)
+print("Wpisz 'quit' lub 'exit' aby zakończyć rozmowę.")
+print("-"*50 + "\n")
+
+while True:
+     
+     #sprawdzanie czy koniec
+    if user_input.lower() in ["quit", "exit", "Quit", "Exit", "q"]:
+        print("\n Do widzenia! Miłego dnia.\n")
+        break
     
-    if not wiadomosc:
-        return jsonify({'error': 'Wiadomosc jest pusta'}), 200
+    user_input = input("Ty: ").strip()
     
-    historia.append({"role": "user", "content": wiadomosc})
+    #omijanie pustek
+    if not user_input:
+        print("Wpisz coś...\n")
+        continue
+    
+    # Dodaj pytanie użytkownika do historii
+    history.append({"role": "user", "content": user_input})
     
     try:
-        odpowiedz = client.messages.create(
-            model="claude-3-5-sonnet",
+        # Wyślij całą historię do Claude
+        print("Claude myśli...", end="", flush=True)
+        
+        response = client.messages.create(
+            model="xyz",
             max_tokens=200,
-            messages=historia
+            messages=history
         )
-        tresc = odpowiedz.content[0].text
-        historia.append({"role": "assistant", "content": tresc})
-        return jsonify({'response': tresc})
+        
+        print("\r" + " " * 20 + "\r", end="")  #czysci komunikat
+        
+        assistant_response = response.content[0].text
+        
+        print(f"Claude: {assistant_response}\n")
+
+        #dodawanie do histori odpowiedzi
+        history.append({"role": "assistant", "content": assistant_response})
+        
+    except anthropic.APIError as e:
+        print(f"\n Błąd API: {e}\n")
     except Exception as e:
-        return jsonify({'error': str(e)}), 200
+        print(f"\n Wystąpił nieoczekiwany błąd: {e}\n")
+
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    main()
